@@ -108,8 +108,8 @@ class Database(object):
         query_set = None
         last_time = datetime.utcnow()
         for port in dt_transfer.keys():
-            # case1 += 'WHEN %s THEN `traffic_up`+%s' % (port, 0)  # all in traffic_down
-            case2 += 'WHEN %s THEN `traffic_down`+%s' % (port, dt_transfer[port])
+            # case1 += ' WHEN %s THEN `traffic_up`+%s' % (port, 0)  # all in traffic_down
+            case2 += ' WHEN %s THEN `traffic_down`+%s' % (port, dt_transfer[port])
             if query_set is not None:
                 query_set += ',%s' % port
             else:
