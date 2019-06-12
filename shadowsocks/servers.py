@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2015 mengskysama
@@ -16,16 +16,20 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import gc
 import sys
 import os
 import logging
 import time
+
 # Check whether the config is correctly renamed
 try:
-    import config
+    from shadowsocks import config
 except ImportError:
-    print('[ERROR] Please rename `config_example.py` to `config.py` first!')
-    sys.exit('config not found')
+    print('[ERROR - CONFIG NOT FOUND] Please check:\n'
+          '  1. Have you installed the package? (using `python setup.py install -f`)\n'
+          '  2. Have you already copied `config_example.py` as `config.py` and set up your configs?\n')
+    sys.exit('  config not found\n')
 # For those system do not have thread (or _thread in Python 3)
 try:
     import thread
@@ -48,7 +52,7 @@ if platform == 'linux' or platform == 'linux2':
         else:
             logger.addHandler(consoleHandler)
 
-if config.LOG_ENABLE:
+if config.LOG_ALSO_TO_FILE:
     # If enabled logging to file, add a fileHandler as well
     if sys.version_info >= (2, 6) and platform != 'win32':
         # If python version is >= 2.6 and it is not running on Windows, use WatchedFileHandler
@@ -62,17 +66,20 @@ if config.LOG_ENABLE:
 
 # Check whether the versions of config files match
 try:
-    import config_example
-    if not hasattr(config, 'CONFIG_VERSION') or config.CONFIG_VERSION != config_example.CONFIG_VERSION:
-        logging.error('Your config file is outdated. Please update `config.py` according to `config_example.py`.')
-        sys.exit('config out-dated')
+    from shadowsocks import config_example
+
+    if not hasattr(config, 'DEV_VERSION') or config.DEV_VERSION != config_example.DEV_VERSION:
+        logging.error('Your config file is too old. Please update `config.py` according to `config_example.py`.')
+        sys.exit('config out of date')
 except ImportError:
-    logging.error('DO NOT delete the example configuration! Please re-upload it or use `git reset` to recover the file!')
-    sys.exit('example config file missing')
+    logging.error('\n  Please make sure NOT to delete the file `config_example.py`!\n'
+                  '  Please re-upload it to server or use `git reset` to recover the file!\n')
+    sys.exit('  example config file missing\n')
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../'))
-import manager
+
+from shadowsocks import manager, dbtransfer
+from shadowsocks.constant import Constant
 import traceback
-from dbtransfer import DbTransfer
 
 if os.path.isdir('../.git') and not os.path.exists('../.nogit'):
     import subprocess
@@ -80,7 +87,7 @@ if os.path.isdir('../.git') and not os.path.exists('../.nogit'):
         # Compatible with Python < 2.7
         VERSION = subprocess.Popen(["git", "describe", "--tags", "--always"], stdout=subprocess.PIPE).communicate()[0]
     else:
-        VERSION = subprocess.check_output(["git", "describe", "--tags", "--always"])
+        VERSION = subprocess.check_output(["git", "describe", "--tags", "--always"]).decode()
     # Remove EOL characters in git's output
     VERSION = VERSION.rstrip()
 else:
@@ -94,47 +101,41 @@ def subprocess_callback(stack, exception):
 
 
 def main():
-    if config.SS_FIREWALL_ENABLED:
-        if config.SS_FIREWALL_MODE == 'blacklist':
-            firewall_ports = config.SS_BAN_PORTS
-        else:
-            firewall_ports = config.SS_ALLOW_PORTS
-    else:
-        firewall_ports = None
-
+    firewall_ports = config.SS_FIREWALL_PORTS if config.SS_FIREWALL_ENABLED else None
     config_passed = {
         'server': config.SS_BIND_IP,
         'local_port': 1081,
         'port_password': {},
-        'method': config.SS_METHOD,
-        'manager_address': '%s:%s' % (config.MANAGER_BIND_IP, config.MANAGER_PORT),
+        'method': config.SS_DEFAULT_METHOD,
+        'manager_address': '%s:%s' % (config.MANAGE_BIND_IP, config.MANAGE_PORT),
         'timeout': config.SS_TIMEOUT,
         'fast_open': config.SS_FASTOPEN,
         'verbose': config.SS_VERBOSE,
         'forbidden_ip': config.SS_FORBIDDEN_IP,
         'firewall_mode': config.SS_FIREWALL_MODE,
-        'firewall_trusted': config.SS_FIREWALL_TRUSTED,
+        'firewall_trusted': config.SS_FIREWALL_TRUSTED_USERS,
         'firewall_ports': firewall_ports,
         'aead_enforcement': config.SS_ENFORCE_AEAD
     }
     logging.info('-----------------------------------------')
     logging.info('Multi-User Shadowsocks Server Starting...')
     logging.info('Current Server Version: %s' % VERSION)
-    if config.API_ENABLED:
+    if config.INTERFACE == Constant.WebApi:
         logging.info('Now using MultiUser API as the user interface')
-    else:
+    elif config.INTERFACE == Constant.Database:
         logging.info('Now using MySQL Database as the user interface')
     logging.info('Now starting manager thread...')
     thread.start_new_thread(manager.run, (config_passed, subprocess_callback,))
     time.sleep(5)
     logging.info('Now starting user pulling thread...')
-    thread.start_new_thread(DbTransfer.thread_pull, ())
+    thread.start_new_thread(dbtransfer.thread_pull, ())
     time.sleep(5)
     logging.info('Now starting user pushing thread...')
-    thread.start_new_thread(DbTransfer.thread_push, ())
-    
+    thread.start_new_thread(dbtransfer.thread_push, ())
+
     while True:
         time.sleep(100)
+        gc.collect()
 
 
 if __name__ == '__main__':

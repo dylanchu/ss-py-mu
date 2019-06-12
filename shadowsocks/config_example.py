@@ -1,47 +1,45 @@
 # !!! Please rename config_example.py as config.py BEFORE editing it !!!
 
 import logging
-# !!! Only edit this line when you update your configuration file !!!
-# After you update, the value of CONFIG_VERSION in config.py and
-# config_example.py should be the same in order to start the server
-CONFIG_VERSION = 1
+from shadowsocks.constant import Constant
+# You'll need to copy config_example.py as config.py and update configures
+# if they have different DEV_VERSION.
+DEV_VERSION = '20190611-1'
 
 
-# Manyuser Interface Settings
+# MultiUser Interface Settings
 # ---------------------------
-# If API is enabled, database will no longer be used
-# The known web panel that is compatible with the API is SS-Panel V3
-# Be careful and check whether your web panel supports this API BEFORE you enable this feature
-API_ENABLED = False
-# Time interval between 2 pulls from the database or API
-CHECKTIME = 30
-# Time interval between 2 pushes to the database or API
-SYNCTIME = 300
-# Timeout for MySQL connection or web socket (if using API)
-TIMEOUT = 30
+# Currently just use Constant.Database, there is no known app supports API yet.
+INTERFACE = Constant.Database  # Constant.Database or Constant.WebApi
 
-# MySQL Database Config (NO NEED to edit if you set API_ENABLED 'True' above)
-MYSQL_HOST = 'db.example.net'
+# Database Config
+MYSQL_HOST = 'localhost'
 MYSQL_PORT = 3306
-MYSQL_USER = 'root'
-MYSQL_PASS = 'root'
-MYSQL_DB = 'shadowsocks'
-MYSQL_USER_TABLE = 'user'
+MYSQL_USER = 'your_username'
+MYSQL_PASS = 'your_password'
+MYSQL_DB = 'your_db_name'
+MYSQL_USER_TABLE = 'user'  # USUALLY this dont need to be changed
+MYSQL_TIMEOUT = 30  # Also the timeout of connecting to WebApi
 
-# Shadowsocks MultiUser API Settings
-API_URL = 'http://domain/mu'
+# Shadowsocks MultiUser API Settings  # todo: not implemented, to remove
+# ----------------
+API_URL = 'https://yoursite.com/mu'
 # API Key (you can find this in the .env file if you are using SS-Panel V3)
-API_PASS = 'mupass'
-API_NODE_ID = '1'
+API_PASS = 'aaa-bbb-ccc'
+NODE_ID = '1'
 
 
 # Manager Settings
 # ----------------
 # USUALLY you can just keep this section unchanged
-# if you want manage in other server you should set this value to global ip
-MANAGER_BIND_IP = '127.0.0.1'
-# make sure this port is idle
-MANAGER_PORT = 65000
+MANAGE_PASS = 'passwd'  # no need to change if ss-manager only listen on 127.0.0.1
+MANAGE_BIND_IP = '127.0.0.1'  # change it only if ss-manager is on other server
+MANAGE_PORT = 65000  # make sure this port is idle
+
+# Data Sync Settings
+# ----------------
+PULL_INTERVAL = 30  # interval between 2 pulls from db or api
+PUSH_INTERVAL = 120  # interval between 2 pushes to db or api
 
 
 # Server Settings
@@ -51,48 +49,46 @@ MANAGER_PORT = 65000
 # if you want to bind only all of ipv4 please use '0.0.0.0'
 # if you want to bind a specific IP you may use something like '4.4.4.4'
 SS_BIND_IP = '::'
-# This default method will be replaced by database/api query result if applicable when SS_CUSTOM_METHOD is enabled
-SS_METHOD = 'chacha20-ietf-poly1305'
-SS_CUSTOM_METHOD = True
+# default method will be replaced by database/api query result if applicable when SS_USE_CUSTOM_METHOD is True
+SS_DEFAULT_METHOD = 'aes-128-cfb'
+SS_USE_CUSTOM_METHOD = True
 # Enforce the use of AEAD ciphers
-# When enabled, all requests of creating server with a non-AEAD cipher will be omitted
-# For more information, please refer to http://www.shadowsocks.org/en/spec/AEAD-Ciphers.html
+# When enabled, all requests of creating server with non-AEAD cipher will be omitted
+# Check shadowsocks/crypto/aead.py for the list of ciphers
 SS_ENFORCE_AEAD = False
 # Skip listening these ports
 SS_SKIP_PORTS = [80]
 # TCP Fastopen (Some OS may not support this, Eg.: Windows)
 SS_FASTOPEN = False
-# Shadowsocks socket timeout
-# It should not be too small as some protocol has keep-alive packet of long time, Eg.: BT
-SS_TIMEOUT = 310
+# Shadowsocks Time Out
+# It should > 180s as some protocol has keep-alive packet of 3 min, Eg.: bt
+SS_TIMEOUT = 185
 
 
 # Firewall Settings
 # -----------------
-# These settings are to prevent user from abusing your service
-SS_FIREWALL_ENABLED = False
-# Mode = whitelist or blacklist
-SS_FIREWALL_MODE = 'blacklist'
+# Prevent user from abusing your service
+SS_FIREWALL_ENABLED = True
+SS_FIREWALL_MODE = 'blacklist'  # 'whitelist' or 'blacklist'
 # Member ports should be INTEGERS
-# Only Ban these target ports (for blacklist mode)
-SS_BAN_PORTS = [22, 23, 25]
-# Only Allow these target ports (for whitelist mode)
-SS_ALLOW_PORTS = [53, 80, 443, 8080, 8081]
+# (SS_FIREWALL_PORTS are configured for tcp/udp relay, remote ports, not ss ports)
+SS_FIREWALL_PORTS = [23, 25]  # 'only ban' for blacklist, or 'only allow' for whitelist
 # Trusted users (all target ports will be not be blocked for these users)
-SS_FIREWALL_TRUSTED = [443]
+SS_FIREWALL_TRUSTED_USERS = [443]
 # Banned Target IP List
 SS_FORBIDDEN_IP = []
 
 
-# Debugging and Logging Settings
+# Logging and Debugging Settings
 # --------------------------
-# If SS_VERBOSE is true, traceback will be printed to STDIO when an exception is thrown
-SS_VERBOSE = False
 LOG_ENABLE = True
+SS_VERBOSE = False
 # Available Log Level: logging.NOTSET|DEBUG|INFO|WARNING|ERROR|CRITICAL
 LOG_LEVEL = logging.INFO
+# chud - (wocao, zhushi zhong de zhongwen biaodian ye baocuo, bianma wenti)
+LOG_ALSO_TO_FILE = False  # set to False if you use supervisor to manage logs
 LOG_FILE = 'shadowsocks.log'
 # The following format is the one suggested for debugging
 # LOG_FORMAT = '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s'
 LOG_FORMAT = '%(asctime)s %(levelname)s %(message)s'
-LOG_DATE_FORMAT = '%b %d %H:%M:%S'
+LOG_DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
