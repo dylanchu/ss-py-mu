@@ -27,8 +27,9 @@ try:
     from shadowsocks import config
 except ImportError:
     print('[ERROR - CONFIG NOT FOUND] Please check:\n'
-          '  1. Have you installed the package? (using `python setup.py install -f`)\n'
-          '  2. Have you already copied `config_example.py` as `config.py` and set up your configs?\n')
+          '  1. Have you already copied `config_example.py` as `config.py` and set up your configs?\n'
+          '  2. Have you installed the package? (using `python setup.py install -f`)\n'
+          '  3. You need to do step.1 first, then step.2\n')
     sys.exit('  config not found\n')
 # For those system do not have thread (or _thread in Python 3)
 try:
