@@ -66,4 +66,6 @@ CREATE TABLE `user` (
 ) ENGINE=InnoDB AUTO_INCREMENT=49 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
+alter table user auto_increment=1;
+
 -- Dump completed on 2018-05-21 15:45:20
