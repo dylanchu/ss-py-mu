@@ -74,24 +74,25 @@ class SsCommander(object):
 
 
 class Database(object):
-    user_select_fields = 'port, u, d, transfer_enable, passwd, switch, enable, method, email, plan_type, plan_end_time'
+    user_select_fields = 'ss_port, ss_pwd, ss_enabled, ss_method, traffic_up, traffic_down, traffic_quota, ' \
+                         'level, email, plan_type, plan_end_time'
 
     @staticmethod
-    def pull_db_all_user():
-        string = ''
+    def pull_enabled_users():
+        conditions = ''
         if config.SS_VERBOSE:
             logging.info('pull db, skip ports: %s' % config.SS_SKIP_PORTS)
         for i, port in enumerate(config.SS_SKIP_PORTS):
             if i == 0:
-                string = ' WHERE `port`<>%d' % port
+                conditions = 'WHERE `ss_enabled`=1 AND `ss_port`<>%d' % port
             else:
-                string = '%s AND `port`<>%d' % (string, port)
+                conditions = '%s AND `ss_port`<>%d' % (conditions, port)
         conn = cymysql.connect(host=config.MYSQL_HOST, port=config.MYSQL_PORT, user=config.MYSQL_USER,
                                passwd=config.MYSQL_PASS, db=config.MYSQL_DB, charset='utf8')
         cur = conn.cursor()
-        sql_dict = {'fields': Database.user_select_fields, 'table': config.MYSQL_USER_TABLE, 'conditions': string}
+        sql_dict = {'fields': Database.user_select_fields, 'table': config.MYSQL_USER_TABLE, 'conditions': conditions}
         # noinspection SqlResolve
-        cur.execute("SELECT {fields} FROM {table} {conditions} ORDER BY `port` ASC".format(**sql_dict))
+        cur.execute("SELECT {fields} FROM {table} {conditions} ORDER BY `ss_port` ASC".format(**sql_dict))
         rows = cur.fetchall()
         # Release resources
         cur.close()
@@ -106,21 +107,20 @@ class Database(object):
         query_sub_when = ''
         query_sub_when2 = ''
         query_sub_in = None
-        last_time = time.time()
+        last_time = datetime.utcnow()
         for port in dt_transfer.keys():
-            query_sub_when += ' WHEN %s THEN `u`+%s' % (port, 0)  # all in d
-            query_sub_when2 += ' WHEN %s THEN `d`+%s' % (
-                port, dt_transfer[port])
+            query_sub_when += ' WHEN %s THEN `traffic_up`+%s' % (port, 0)  # all in traffic_down
+            query_sub_when2 += ' WHEN %s THEN `traffic_down`+%s' % (port, dt_transfer[port])
             if query_sub_in is not None:
                 query_sub_in += ',%s' % port
             else:
                 query_sub_in = '%s' % port
         if query_sub_when == '':
             return
-        query_sql = query_head + ' SET u = CASE port' + query_sub_when + \
-                    ' END, d = CASE port' + query_sub_when2 + \
-                    ' END, t = ' + str(int(last_time)) + \
-                    ' WHERE port IN (%s)' % query_sub_in
+        query_sql = query_head + ' SET traffic_up = CASE ss_port' + query_sub_when + \
+                    ' END, traffic_down = CASE ss_port' + query_sub_when2 + \
+                    ' END, last_use_time = ' + str(last_time) + \
+                    ' WHERE ss_port IN (%s)' % query_sub_in
         # print query_sql
         conn = cymysql.connect(host=config.MYSQL_HOST, port=config.MYSQL_PORT, user=config.MYSQL_USER,
                                passwd=config.MYSQL_PASS, db=config.MYSQL_DB, charset='utf8')
@@ -159,43 +159,37 @@ user = namedtuple('user', Database.user_select_fields)
 def validate_users_and_sync_ss(rows):
     time_now = datetime.utcnow()
     global user
+    invalid_reasons = {-1: 'User Level < 0', -2: 'Bandwidth Exceeded', -3: 'Plan Expired',
+                       -4: 'Update SS Password', -5: 'Update SS Method'}
     for user in map(user._make, rows):
-        # 'port, u, d, transfer_enable, passwd, switch, enable, method, email, plan_type, plan_end_time'
-        #    0   1  2          3           4       5       6       7       8       9           10
-        server = json.loads(SsCommander.send_command('stat: {"server_port":%s}' % user.port))
-        if server['stat'] != 'ko':
-            if user.switch == 0 or user.enable == 0:
-                # stop disabled or switched-off user
-                logging.info('U[%d] Server has been stopped: user is disabled' % user.port)
-                SsCommander.send_command('remove: {"server_port":%d}' % user.port)
-            elif user.u + user.d >= user.transfer_enable:
-                # stop user that exceeds bandwidth limit
-                logging.info('U[%d] Server has been stopped: bandwith exceeded' % user.port)
-                SsCommander.send_command('remove: {"server_port":%d}' % user.port)
-            elif user.plan_end_time < time_now:
-                # stop user that exceeds plan_end_time
-                logging.info('U[%d] Server has been stopped: plan_end_time exceeded' % user.port)
-                SsCommander.send_command('remove: {"server_port":%d}' % user.port)
-            elif server['password'] != user.passwd:
-                # password changed
-                logging.info('U[%d] Server is restarting: password is changed' % user.port)
-                SsCommander.send_command('remove: {"server_port":%d}' % user.port)
-            else:
-                user_method = user.method if config.SS_USE_CUSTOM_METHOD else config.SS_DEFAULT_METHOD
-                if server['method'] != user_method:
-                    # encryption method changed
-                    logging.info('U[%d] Server is restarting: encryption method is changed' % user.port)
-                    SsCommander.send_command('remove: {"server_port":%d}' % user.port)
+        # 'ss_port, ss_pwd, ss_enabled, ss_method, traffic_up, traffic_down, traffic_quota, ' \
+        #     0        1        2           3           4            5              6
+        #                  'level, email, plan_type, plan_end_time'
+        #                     7      8       9           10
+        server = json.loads(SsCommander.send_command('stat: {"server_port":%s}' % user.ss_port))
+        status = 1  # normal
+        if user.level < 0:
+            status = -1
+        elif user.traffic_up + user.traffic_down >= user.traffic_quota:
+            status = -2
+        elif user.plan_end_time < time_now:
+            status = -3
+        elif user.ss_pwd != server['password']:
+            status = -4
         else:
-            if (user.switch == 1 or user.switch == "1") and user.enable == 1 and user.u + user.d < \
-                    user.transfer_enable and user.plan_end_time > time_now:
-                user_method = user.method if config.SS_USE_CUSTOM_METHOD else config.SS_DEFAULT_METHOD
-                SsCommander.send_command(
-                    'add: {"server_port": %d, "password":"%s", "method":"%s", "email":"%s"}' % (
-                        user.port, user.passwd, user_method, user.email))
-                if config.MANAGE_BIND_IP != '127.0.0.1':
-                    logging.info('U[%s] Server Started with password [%s] and method [%s]' %
-                                 (user.port, user.passwd, user_method))
+            user_method = user.ss_method if config.SS_USE_CUSTOM_METHOD else config.SS_DEFAULT_METHOD
+            if server['method'] != user_method:
+                status = -5
+        if server['stat'] == 'ko' and status == 1:
+            user_method = user.ss_method if config.SS_USE_CUSTOM_METHOD else config.SS_DEFAULT_METHOD
+            SsCommander.send_command('add: {"server_port": %d, "password":"%s", "method":"%s", "email":"%s"}' %
+                                     (user.ss_port, user.ss_pwd, user_method, user.email))
+            if config.MANAGE_BIND_IP != '127.0.0.1':
+                logging.info('U[%s] with pwd[%s] and m[%s] will be started on Server %s' %
+                             (user.ss_port, user.ss_pwd, user_method, config.MANAGE_BIND_IP))
+        elif server['stat'] != 'ko' and status < 0:
+            logging.info('U[%d] will be removed: %s' % (user.ss_port, invalid_reasons[status]))
+            SsCommander.send_command('remove: {"server_port":%d}' % user.ss_port)
 
 
 def thread_pull():
@@ -205,7 +199,7 @@ def thread_pull():
             if config.INTERFACE == Constant.WebApi:
                 rows = WebApi.pull_api_user()
             else:  # config.INTERFACE == Constant.Database
-                rows = Database.pull_db_all_user()
+                rows = Database.pull_enabled_users()
             validate_users_and_sync_ss(rows)
         except Exception as e:
             if config.SS_VERBOSE:
