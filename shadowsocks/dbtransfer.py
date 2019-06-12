@@ -174,22 +174,26 @@ def validate_users_and_sync_ss(rows):
             status = -2
         elif user.plan_end_time < time_now:
             status = -3
-        elif user.ss_pwd != server['password']:
-            status = -4
+
+        # when server[stat] is 'ko', server has no other attributes
+        if server['stat'] == 'ko':
+            if status == 1:
+                user_method = user.ss_method if config.SS_USE_CUSTOM_METHOD else config.SS_DEFAULT_METHOD
+                SsCommander.send_command('add: {"server_port": %d, "password":"%s", "method":"%s", "email":"%s"}' %
+                                         (user.ss_port, user.ss_pwd, user_method, user.email))
+                if config.MANAGE_BIND_IP != '127.0.0.1':
+                    logging.info('U[%s] with pwd[%s] and m[%s] will be started on Server %s' %
+                                 (user.ss_port, user.ss_pwd, user_method, config.MANAGE_BIND_IP))
         else:
-            user_method = user.ss_method if config.SS_USE_CUSTOM_METHOD else config.SS_DEFAULT_METHOD
-            if server['method'] != user_method:
-                status = -5
-        if server['stat'] == 'ko' and status == 1:
-            user_method = user.ss_method if config.SS_USE_CUSTOM_METHOD else config.SS_DEFAULT_METHOD
-            SsCommander.send_command('add: {"server_port": %d, "password":"%s", "method":"%s", "email":"%s"}' %
-                                     (user.ss_port, user.ss_pwd, user_method, user.email))
-            if config.MANAGE_BIND_IP != '127.0.0.1':
-                logging.info('U[%s] with pwd[%s] and m[%s] will be started on Server %s' %
-                             (user.ss_port, user.ss_pwd, user_method, config.MANAGE_BIND_IP))
-        elif server['stat'] != 'ko' and status < 0:
-            logging.info('U[%d] will be removed: %s' % (user.ss_port, invalid_reasons[status]))
-            SsCommander.send_command('remove: {"server_port":%d}' % user.ss_port)
+            if user.ss_pwd != server['password']:
+                status = -4
+            else:
+                user_method = user.ss_method if config.SS_USE_CUSTOM_METHOD else config.SS_DEFAULT_METHOD
+                if server['method'] != user_method:
+                    status = -5
+            if status < 0:
+                logging.info('U[%d] will be removed: %s' % (user.ss_port, invalid_reasons[status]))
+                SsCommander.send_command('remove: {"server_port":%d}' % user.ss_port)
 
 
 def thread_pull():
