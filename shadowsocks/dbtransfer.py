@@ -103,25 +103,26 @@ class Database(object):
 
     @staticmethod
     def push_traffic_usage(dt_transfer):
-        query_head = 'UPDATE `user`'
-        query_sub_when = ''
-        query_sub_when2 = ''
-        query_sub_in = None
+        case1 = ''
+        case2 = ''
+        query_set = None
         last_time = datetime.utcnow()
         for port in dt_transfer.keys():
-            query_sub_when += ' WHEN %s THEN `traffic_up`+%s' % (port, 0)  # all in traffic_down
-            query_sub_when2 += ' WHEN %s THEN `traffic_down`+%s' % (port, dt_transfer[port])
-            if query_sub_in is not None:
-                query_sub_in += ',%s' % port
+            # case1 += 'WHEN %s THEN `traffic_up`+%s' % (port, 0)  # all in traffic_down
+            case2 += 'WHEN %s THEN `traffic_down`+%s' % (port, dt_transfer[port])
+            if query_set is not None:
+                query_set += ',%s' % port
             else:
-                query_sub_in = '%s' % port
-        if query_sub_when == '':
+                query_set = '%s' % port
+        if case2 == '':  # since case1 is never changed
             return
-        query_sql = query_head + ' SET traffic_up = CASE ss_port' + query_sub_when + \
-                    ' END, traffic_down = CASE ss_port' + query_sub_when2 + \
-                    ' END, last_use_time = ' + str(last_time) + \
-                    ' WHERE ss_port IN (%s)' % query_sub_in
-        # print query_sql
+        sql_dict = {'table': config.MYSQL_USER_TABLE, 'case1': case1, 'case2': case2,
+                    'last_time': str(last_time), 'query_set': query_set}
+        # query_sql = "UPDATE {table} SET `traffic_up`=CASE ss_port {case1} END," \
+        query_sql = "UPDATE {table} SET " \
+                    "`traffic_down`=CASE ss_port {case2} END," \
+                    "`last_use_time`='{last_time}'" \
+                    " WHERE ss_port IN ({query_set})".format(**sql_dict)
         conn = cymysql.connect(host=config.MYSQL_HOST, port=config.MYSQL_PORT, user=config.MYSQL_USER,
                                passwd=config.MYSQL_PASS, db=config.MYSQL_DB, charset='utf8')
         cur = conn.cursor()
