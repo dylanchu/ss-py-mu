@@ -147,6 +147,7 @@ class TCPRelayHandler(object):
         self._data_to_write_to_remote = []
         self._upstream_status = WAIT_STATUS_READING
         self._downstream_status = WAIT_STATUS_INIT
+        self._client_address = local_sock.getpeername()[:2]
         self._remote_address = None
         self._forbidden_iplist = config.get('forbidden_ip')
         if is_local:
