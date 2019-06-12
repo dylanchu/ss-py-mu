@@ -18,11 +18,12 @@ setup(
     package_data={
         'shadowsocks': ['README.rst', 'LICENSE']
     },
-    install_requires=[],
+    install_requires=['cymysql'],
     entry_points="""
     [console_scripts]
     sslocal = shadowsocks.local:main
     ssserver = shadowsocks.server:main
+    ss-py-mu = shadowsocks.servers:main
     """,
     classifiers=[
         'License :: OSI Approved :: Apache Software License',
