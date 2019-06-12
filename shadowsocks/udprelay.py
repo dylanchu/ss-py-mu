@@ -311,7 +311,8 @@ class UDPRelay(object):
                 return
             if not data:
                 return
-            if parse_header(data) is None:
+            header_result = parse_header(data)
+            if header_result is None:
                 return
             addrtype, dest_addr, dest_port, header_length = header_result
             if self._is_tunnel:

@@ -23,7 +23,7 @@ import json
 import sys
 import getopt
 import logging
-import config
+from shadowsocks import config
 import traceback
 
 from functools import wraps
@@ -482,7 +482,7 @@ Online help: <https://github.com/shadowsocks/shadowsocks>
 ''')
 
 
-def _decode_list(data):
+def _decode_list(data):  # for python2's json module only
     rv = []
     for item in data:
         if hasattr(item, 'encode'):
@@ -495,7 +495,7 @@ def _decode_list(data):
     return rv
 
 
-def _decode_dict(data):
+def _decode_dict(data):  # for python2's json module only
     rv = {}
     for key, value in data.items():
         if hasattr(value, 'encode'):
@@ -510,4 +510,7 @@ def _decode_dict(data):
 
 def parse_json_in_str(data):
     # parse json and convert everything from unicode to str
-    return json.loads(data, object_hook=_decode_dict)
+    if str == bytes:
+        return json.loads(data, object_hook=_decode_dict)
+    else:
+        return json.loads(data)

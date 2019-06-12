@@ -121,8 +121,8 @@ class Manager(object):
         servers = self._relays.get(port, None)
         if servers:
             # Server is now running
-            self._send_control_data(b'{"stat":"ok", "password":"%s", "method":"%s"}' % (
-                servers[0]._config['password'], servers[0]._config['method']))
+            self._send_control_data(('{"stat":"ok", "password":"%s", "method":"%s"}' % (
+                servers[0]._config['password'], servers[0]._config['method'])).encode())
         else:
             # Server is not running
             self._send_control_data(b'{"stat":"ko"}')
@@ -167,8 +167,6 @@ class Manager(object):
         command, config_json = parts
         try:
             config = shell.parse_json_in_str(config_json)
-            if 'method' in config:
-                config['method'] = common.to_str(config['method'])
             return command, config
         except Exception as e:
             logging.error(e)
@@ -290,7 +288,7 @@ def test():
                                header + b'GET /\r\n\r\n')
     tcp_cli = socket.socket()
     tcp_cli.connect(('127.0.0.1', 7001))
-    tcp_cli.send(data)
+    tcp_cli.send(common.to_bytes(data))
     tcp_cli.recv(4096)
     tcp_cli.close()
 
@@ -307,7 +305,7 @@ def test():
     data = cryptor.encrypt_all(b'foobar2', 'aes-256-cfb',
                                header + b'test')
     udp_cli = socket.socket(type=socket.SOCK_DGRAM)
-    udp_cli.sendto(data.encode(), ('127.0.0.1', 8382))
+    udp_cli.sendto(common.to_bytes(data), ('127.0.0.1', 8382))
     tcp_cli.close()
 
     data, addr = cli.recvfrom(1506)
