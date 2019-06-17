@@ -30,7 +30,6 @@ htmlcov
 .DS_Store
 .idea
 tags
-shadowsocks/config.py
 shadowsocks/temp_my_configs/
 *.log
 *.pyc

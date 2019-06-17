@@ -21,17 +21,7 @@ import sys
 import os
 import logging
 import time
-
-# Check whether the config is correctly renamed
-try:
-    from shadowsocks import config
-except ImportError:
-    print('[ERROR - CONFIG NOT FOUND] Please check:\n'
-          '  1. Have you already copied `config_example.py` as `config.py` and set up your configs?\n'
-          '  2. Have you installed the package? (using `python setup.py install -f`)\n'
-          '  3. You need to do step.1 first, then step.2\n')
-    sys.exit('  config not found\n')
-# For those system do not have thread (or _thread in Python 3)
+from shadowsocks import config
 try:
     import thread
 except ImportError:
@@ -65,17 +55,6 @@ if config.LOG_ALSO_TO_FILE:
     fileHandler.setLevel(config.LOG_LEVEL)
     logger.addHandler(fileHandler)
 
-# Check whether the versions of config files match
-try:
-    from shadowsocks import config_example
-
-    if not hasattr(config, 'DEV_VERSION') or config.DEV_VERSION != config_example.DEV_VERSION:
-        logging.error('Your config file is too old. Please update `config.py` according to `config_example.py`.')
-        sys.exit('config out of date')
-except ImportError:
-    logging.error('\n  Please make sure NOT to delete the file `config_example.py`!\n'
-                  '  Please re-upload it to server or use `git reset` to recover the file!\n')
-    sys.exit('  example config file missing\n')
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../'))
 
 from shadowsocks import manager, dbtransfer

@@ -4,19 +4,7 @@
 
 以 python3 环境为例：
 
-1. 安装包文件和配置文件
-
-    ``` bash
-    git clone https://github.com/dylanchu/ss-py-mu.git
-    cd ss-py-mu
-    cp config_exmaple.py config.py
-    # 然后编辑你自己的config.py，编辑好并保存之后，继续执行下面的命令
-    sudo python3 setup.py install -f
-    ```
-    
-    注意：每次更新 `config.py` 之后，你都需要重新运行 `sudo python3 setup.py install -f` 覆盖安装该包以使新配置文件生效。
-
-2. 在MySQL中建立数据库
+1. 在MySQL中建立数据库
 
    ```mysql
    create database shadowsocks;
@@ -24,21 +12,29 @@
    quit
    ```
 
-3. 在 bash 下导入 sql 模板文件
+2. 在 bash 下导入 sql 模板文件
 
    ```bash
    mysql -uyourdbusername -pyourpassword shadowsocks < shadowsocks.sql
    ```
 
+3. 安装该程序包
 
+    ``` bash
+    git clone https://github.com/dylanchu/ss-py-mu.git
+    cd ss-py-mu
+    sudo python3 setup.py install -f
+    ```
+    
+4. 更改配置文件
 
-至此，你已经安装好了该程序，运行试一下：
+   至此，你已经安装好了该程序，运行试一下：
 
-```bash
-ss-py-mu
-```
+   ```bash
+   ss-py-mu
+   ```
 
-如果没有报错信息，说明一切顺利，按 `ctrl+c` 结束运行。
+   正常情况你会看到提示让你更改配置文件 `/root/.config/ss-py-mu/config.ini`，按要求更改即可。更改后再次运行程序，如果没有报错信息，说明一切顺利，按 `ctrl+c` 可以结束运行。
 
 
 
@@ -78,7 +74,7 @@ ss-py-mu
 
 - servers.py
 - dbtransfer.py
-- config.py / config_example.py
+- config.py / config_default.ini / config_template.ini
 - constant.py
 - 数据库模板文件 shadowsocks.sql / shadowsocks-minimal.sql
 
