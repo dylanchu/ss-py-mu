@@ -115,5 +115,5 @@ _log_levels = {'notset': logging.NOTSET, 'debug': logging.DEBUG,
 LOG_LEVEL = _log_levels[config.get('logs', 'log_level')]
 LOG_ALSO_TO_FILE = config.getboolean('logs', 'also_to_file')
 LOG_FILE = config.get('logs', 'file')
-LOG_FORMAT = config.get('logs', 'format', raw=True)
-LOG_DATE_FORMAT = config.get('logs', 'time_format', raw=True)
+LOG_FORMAT = config.get('logs', 'format', raw=True).encode().decode('unicode_escape')
+LOG_DATE_FORMAT = config.get('logs', 'time_format', raw=True).encode().decode('unicode_escape')
