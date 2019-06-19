@@ -71,7 +71,7 @@ if os.path.isdir('../.git') and not os.path.exists('../.nogit'):
     # Remove EOL characters in git's output
     VERSION = VERSION.rstrip()
 else:
-    VERSION = '3.4.0-dev'
+    VERSION = '1.0.0-dev'
 
 
 def subprocess_callback(stack, exception):

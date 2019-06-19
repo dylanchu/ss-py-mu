@@ -1,103 +1,70 @@
-About Shadowsocks-python Manyuser
-=================================
-This is a multi-user version of shadowsocks-python. Requires a mysql database or a panel which supports SS MU API.
+About ss-py-mu
 
-Requirement
------------
-1. Python >= 2.5 (python=2.5 need to install extra library: `pip install simplejson`)
-2. MySQL >= 5 (if using database)
-3. A Panel with [MU API](https://github.com/fsgmhoward/shadowsocks-py-mu/wiki/MultiUser-(MU)-API-Reference), such as [SS-Panel V3](https://github.com/orvice/ss-panel). (if using MU API)
+This project is based on  [fsgmhoward's version](<https://github.com/fsgmhoward/shadowsocks-py-mu>). I JUST change the database structure and fix bugs on the original code to work with python3.
 
-Install Instructions for Database User
---------------------------------------
-1. install `cymysql` library by `pip install cymysql`
-2. create a database named `shadowsocks`
-3. import `shadowsocks.sql` into the `shadowsocks` database
-4. copy `config_example.py` to `config.py` and edit it following the notes inside (but DO NOT delete the example file). You *DO NOT* need to edit the API section.
-5. TestRun `cd shadowsocks && python servers.py` (not server.py)
+## shadowsocks
 
-Install Instructions for MU API User
------------------------------------
-1. copy `config_example.py` to `config.py` and edit it following the notes inside (but DO NOT delete the example file). You *DO NOT* need to edit the Database section.
-2. TestRun `cd shadowsocks && python servers.py` (not server.py)
+A fast tunnel proxy that helps you bypass firewalls.
 
-Install Instructions for Docker User
-------------------------------------
+## Install
 
-1. build the docker: `docker build -t shadowsocks-mu .`
-2. create a config file as above
-3. run the docker (random free ports will be allocated):
+Please use python3.
 
+1. Setup database in MySQL.
+
+   ```mysql
+   create database shadowsocks;
+   grant all privileges on shadowsocks.* to 'yourdbusername'@'%' identified by 'yourpassword';
+   quit
    ```
-   docker run -it \
-       -v /PATH/TO/CONFIG/FILE:/shadowsocks/shadowsocks/config.py \
-       -v /PATH/TO/LOG/FILE:/shadowsocks/shadowsocks/shadowsocks.log \
-       -p PORT_START-PORT_END \
-       shadowsocks-mu
+
+2. Import database template in bash
+
+   ```bash
+   mysql -uyourdbusername -pyourpassword shadowsocks < shadowsocks.sql
    ```
+
+3. Install the package
+
+    ``` bash
+    git clone https://github.com/dylanchu/ss-py-mu.git
+    cd ss-py-mu
+    sudo python3 setup.py install -f
+    ```
+    
+4. Config your program
+
+   Try to launch `ss-py-mu` first:
+
+   ```bash
+   ss-py-mu
+   ```
+
+   Normally you'll see the instructions to edit your config file `/root/.config/ss-py-mu/config.ini` . After you have done that, run `ss-py-mu` again. If it runs ok then everything is ok. You can press `ctrl+c` to terminate the program.
    
-   If you want to use fixed ports (e.g. port 443 of the host being matched with 443 of the docker), use `-p PORT_START-PORT_END:PORT_START-PORT_END` instead.
-   
-   Note: `/PATH/TO/CONFIG/FILE` & `/PATH/TO/LOG/FILE` should be **absolute** paths
 
-Reminders for Windows User
---------------------------
-1. install `pyuv` library by `pip install pyuv`
-2. if git is not configured in your `%PATH%` environmental variable, you can create a file named `.nogit` to avoid using `git describe`
 
-If no exceptions are thrown, the server will startup. By default, logging is enabled.
-You should be able to see this kind of thing in `shadowsocks.log`(default log file name)
-```
-Jun 24 01:06:08 INFO -----------------------------------------
-Jun 24 01:06:08 INFO Multi-User Shadowsocks Server Starting...
-Jun 24 01:06:08 INFO Current Server Version: 3.1.0-1-gc2ac618
 
-Jun 24 01:10:11 INFO api downloaded
-Jun 24 01:10:13 INFO api skipped port 443
-Jun 24 01:10:13 INFO Server Added:   P[XXXXX], M[rc4-md5], E[XXXXX@gmail.com]
-Jun 24 01:10:13 INFO Server Added:   P[XXXXX], M[rc4-md5], E[XXXXX@gmail.com]
-```
+## Use supervisor to monitor ss-py-mu
 
-Explanation of the log output
------------------------------
-When adding server:
+1. Supervisor can monitor you program and log the output to a log file. And it can restart your program if it stops because of unexpected reasons.
 
-`P[XXX]` client port (assigned by database)
+1. You will need to create a file `ss-py-mu.conf` under the folder  `/etc/supervisor/conf.d/`. Contents should be like:
+	```
+	[program:ss-py-mu]
+	command = ss-py-mu
+	user=root
+	autostart = true
+	autorestart = true
+	stdout_logfile = /var/log/supervisor/ss-py-mu_stdout.log
+	stderr_logfile = /var/log/supervisor/ss-py-mu_stderr.log
+	```
 
-`M[XXX]` client encryption method
+3. Start your program with supervisor.
 
-`E[XXX]` client email address
+   ```bash
+   supervisorctl reread
+   supervisorctl reload
+   ```
 
-When data connection being established/blocked
 
-`U[XXX]` client port (assigned by database)
-
-`RP[XXX]` remote port (the port the client wants to connect)
-
-`A[XXX-->XXX]` from the client address to the remote address
-
-Database user table column
---------------------------
-`passwd` server pass
-
-`port` server port
-
-`t` last connecting time
-
-`u` no usage for this shadowsocks server (kept unchanged) but essential for some panels
-
-`d` accumulated upload + download data transfer
-
-`method` custom encryption method
-
-`enable`/`switch` indicating whether the user is enabled
-
-`transfer_enable` maximum accumulated data transfer allowed - if `u` + `d` > `transfer_enable`, service for this client will be stopped (other clients are not affected)
-
-Compatibility with frontend UIs
--------------------------------
-It is fully compatible (through [MU API](https://github.com/fsgmhoward/shadowsocks-py-mu/wiki/MultiUser-(MU)-API-Reference)) with [ss-panel V3](https://github.com/orvice/ss-panel) .
-
-Open source license
--------------------
-This program is licensed under [Apache License 2.0](http://www.apache.org/licenses/LICENSE-2.0)
