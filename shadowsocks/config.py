@@ -12,7 +12,7 @@ from shadowsocks.constant import Constant
 
 REQUIRED_DEV_VERSION = '20190611-1'
 
-_user_config_dir = os.path.expanduser("~") + "/.config/ss-py-mu"
+_user_config_dir = os.path.expanduser("~/.config/ss-py-mu")
 user_config_file = _user_config_dir + "/config.ini"
 _current_dir = os.path.dirname(os.path.abspath(__file__))
 default_config_file = os.path.join(_current_dir, 'config_default.ini')
@@ -117,3 +117,12 @@ LOG_ALSO_TO_FILE = config.getboolean('logs', 'also_to_file')
 LOG_FILE = config.get('logs', 'file')
 LOG_FORMAT = config.get('logs', 'format', raw=True).encode().decode('unicode_escape')
 LOG_DATE_FORMAT = config.get('logs', 'time_format', raw=True).encode().decode('unicode_escape')
+
+MAIL_HOST = config.get('smtp', 'host')
+MAIL_PORT = config.getint('smtp', 'port')
+MAIL_EMAIL = config.get('smtp', 'email')
+MAIL_PASSWORD = config.get('smtp', 'password')
+MAIL_FROM = config.get('smtp', 'from')
+MAIL_SSL = config.getboolean('smtp', 'using_ssl')
+MAIL_BCC = parse_list(config.get('smtp', 'bcc'))
+MAIL_ENABLE_REMINDER_MAIL = config.getboolean('smtp', 'enable_reminder_mail')

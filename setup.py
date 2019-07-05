@@ -16,12 +16,13 @@ setup(
     packages=['shadowsocks', 'shadowsocks.crypto'],
     include_package_data=True,
     package_data={
-        'shadowsocks': ['README.rst', 'LICENSE', 'shadowsocks/*.ini']
+        'shadowsocks': ['README.rst', 'LICENSE', 'shadowsocks/*.ini', 'shadowsocks/*.html']
     },
     install_requires=['cymysql'],
     entry_points="""
     [console_scripts]
     ss-py-mu = shadowsocks.servers:main
+    ss-py-mu-reminder-mail = shadowsocks.reminder_mail:main
     """,
     classifiers=[
         'License :: OSI Approved :: Apache Software License',
