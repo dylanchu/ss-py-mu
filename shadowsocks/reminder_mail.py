@@ -11,6 +11,10 @@ import cymysql
 from shadowsocks.reminder_mail_utils import MyMailer
 from shadowsocks import config
 
+import sys
+import codecs
+sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+
 template_customer = ''
 template_myself = ''
 
@@ -24,7 +28,7 @@ if not os.path.isfile(mail_html):
     print('It maybe the first time you run ss-py-mu-reminder-mail, '
           'you can edit the template file in:\n  %s' % mail_html)
 
-with open(mail_html, 'r') as f:
+with open(mail_html, 'r', encoding='utf-8') as f:
     template_customer = f.read()
 
 
